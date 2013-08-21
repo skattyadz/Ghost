@@ -7,6 +7,7 @@ var Post,
     Showdown = require('showdown'),
     converter = new Showdown.converter(),
     User = require('./user').User,
+    Tag = require('./tag').Tag,
     GhostBookshelf = require('./base');
 
 Post = GhostBookshelf.Model.extend({
@@ -123,6 +124,10 @@ Post = GhostBookshelf.Model.extend({
 
     author: function () {
         return this.belongsTo(User, 'author_id');
+    },
+
+    tags: function () {
+        return this.belongsToMany(Tag);
     }
 
 }, {
