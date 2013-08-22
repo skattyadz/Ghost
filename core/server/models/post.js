@@ -47,8 +47,10 @@ Post = GhostBookshelf.Model.extend({
         // handle nested attributes for the post's tags
         var newTags = this.get('tags');
         if (newTags) {
-            this.updateTags(newTags);
             this.set('tags', null, {unset: true});
+
+            // returning a promise because updating tags hits the database
+            return this.updateTags(newTags);
         }
     },
 
@@ -125,7 +127,44 @@ Post = GhostBookshelf.Model.extend({
         return checkIfSlugExists(slug);
     },
 
-    updateTags: function(tags) {
+    updateTags: function (newTags) {
+        var self = this,
+            tagOperations = [];
+
+        tagOperations.push(this.related('tags').fetch().then(function (existingTags) {
+            var existingTagIDs = existingTags.map(function (existingTag) { return existingTag.id });
+
+            // Detect whether any tags were removed
+            var tagsToDetach = existingTagIDs.models.filter(function (existingTagID) {
+                var tagStillRemains = newTags.some(function (newTag) { return newTag.id === existingTagID });
+                return !tagStillRemains;
+            });
+
+            console.log(tagsToDetach.length);
+            tagOperations.push(self.tags().detach(tagsToDetach));
+
+
+            // Detect any tags that have been added by ID
+            var tagsToAddByID = newTags.filter(function (newTag) { return newTag.id > -1 && existingTagIDs.indexOf(newTag.id) > -1});
+            tagOperations.push(self.tags().attach(tagsToAddByID));
+
+            // Detect any tags that have been added, but don't already exist in the database 
+            var tagsToCreateAndAdd = newTags.filter(function (newTag) { return newTag.id === null || newTag.id === undefined });
+            tagsToCreateAndAdd.forEach(function (tagToCreateAndAdd) {
+                var createAndAddOperation = Tag.add({name: tagToCreateAndAdd.name}).then(function (createdTag) {
+                        return self.tags().attach(createdTag);
+                    });
+                tagOperations.push(createAndAddOperation);
+            });
+
+            return when.all(tagOperations);
+        }));
+
+        // }).then(function () {
+        //     return self.related('tags').fetch();
+        // }).then(function (tags){
+        //     console.log(tags);
+        // });
 
     },
 
