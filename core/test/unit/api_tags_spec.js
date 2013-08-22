@@ -68,12 +68,76 @@ describe('Tag Model', function () {
             }).then(function () {
                 return PostModel.read({id: createdPostID}, { withRelated: ['tags']});
             }).then(function (postWithoutTag) {
-                postWithoutTag.related('tags').length.should.equal(0);
+                postWithoutTag.related('tags').should.be.empty;
                 done();
             }).then(null, done); 
         });
 
-        it('can reset its tags from an array');
+        describe('resetting tags from an array on update', function () {
+            // When a Post is updated, iterate through the existing tags, and detach any that have since been removed.
+            // It can be assumed that any remaining tags in the update data are newly added.
+            // Create new tags if needed, and attach them to the Post
+
+            function seedTags (tagNames) {
+                var createOperations = [
+                    PostModel.add({title: 'title', content_raw: 'content'})
+                ];
+
+                var tagModels = tagNames.map(function(tagName) { return TagModel.add({name: tagName}) });
+                createOperations = createOperations.concat(tagModels);
+
+
+                return when.all(createOperations).then(function (models) {
+                    var postModel = models[0],
+                        attachOperations;
+
+                    attachOperations = [
+                        postModel.tags().attach(models[1]),
+                        postModel.tags().attach(models[2]),
+                        postModel.tags().attach(models[3])
+                    ];
+
+                    return when.all(attachOperations).then(function() {
+                        return postModel;
+                    });
+                }).then(function(postModel) {
+                    return PostModel.read({id: postModel.id}, { withRelated: ['tags']});
+                });
+            }
+
+            it('does nothing if tags havent changed', function (done) {
+                var newTags = ['tag1', 'tag2', 'tag3'];
+
+                seedTags(newTags).then(function (postModel) {
+                    return postModel.set('tags', newTags).save();
+                }).then(function(postModel) {
+                    var tagNames = postModel.related('tags').models.map(function(t) { return t.attributes.name });
+                    tagNames.should.eql(newTags);
+
+                    done();
+                }).then(null, done);
+
+            });
+
+            it('detaches tags that have been removed', function (done) {
+                var initialTags = ['tag1', 'tag2', 'tag3'];
+                var newTags = ['tag1', 'tag3'];
+
+                seedTags(initialTags).then(function (postModel) {
+                    return postModel.set('tags', newTags).save();
+                }).then(function(postModel) {
+                    var tagNames = postModel.related('tags').models.map(function(t) { return t.attributes.name });
+                    tagNames.should.eql(newTags);
+
+                    done();
+                }).then(null, done);
+            });
+
+            it('attaches tags that are new to the post, but aleady exist in the database');
+
+            it('creates and attaches tags that are new to the Tags table');
+
+        });
 
     });
 

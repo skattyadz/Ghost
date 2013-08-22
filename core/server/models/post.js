@@ -43,6 +43,13 @@ Post = GhostBookshelf.Model.extend({
 
         this.set('updated_by', 1);
         // refactoring of ghost required in order to make these details available here
+
+        // handle nested attributes for the post's tags
+        var newTags = this.get('tags');
+        if (newTags) {
+            this.updateTags(newTags);
+            this.set('tags', null, {unset: true});
+        }
     },
 
     creating: function () {
@@ -118,6 +125,12 @@ Post = GhostBookshelf.Model.extend({
         return checkIfSlugExists(slug);
     },
 
+    updateTags: function(tags) {
+
+    },
+
+
+    // Relations
     user: function () {
         return this.belongsTo(User, 'created_by');
     },
