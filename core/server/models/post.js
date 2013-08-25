@@ -27,6 +27,7 @@ Post = GhostBookshelf.Model.extend({
     initialize: function () {
         this.on('creating', this.creating, this);
         this.on('saving', this.saving, this);
+        this.on('saving', this.updateTags, this);
     },
 
     saving: function () {
@@ -44,14 +45,6 @@ Post = GhostBookshelf.Model.extend({
         this.set('updated_by', 1);
         // refactoring of ghost required in order to make these details available here
 
-        // handle nested attributes for the post's tags
-        var newTags = this.get('tags');
-        if (newTags) {
-            this.set('tags', null, {unset: true});
-
-            // returning a promise because updating tags hits the database
-            return this.updateTags(newTags);
-        }
     },
 
     creating: function () {
@@ -131,41 +124,41 @@ Post = GhostBookshelf.Model.extend({
         var self = this,
             tagOperations = [];
 
-        tagOperations.push(this.related('tags').fetch().then(function (existingTags) {
-            var existingTagIDs = existingTags.map(function (existingTag) { return existingTag.id });
+        // handle nested attributes for the post's tags
+        var newTags = this.get('tags');
+        if (!newTags) {
+            return;
+        }
 
-            // Detect whether any tags were removed
-            var tagsToDetach = existingTagIDs.models.filter(function (existingTagID) {
-                var tagStillRemains = newTags.some(function (newTag) { return newTag.id === existingTagID });
-                return !tagStillRemains;
-            });
+        this.set('tags', null, {unset: true});
 
-            console.log(tagsToDetach.length);
+        var existingTagIDs = this.related('tags').models.map(function (existingTag) { return existingTag.id });
+
+        // Detect whether any tags were removed
+        var tagsToDetach = existingTagIDs.filter(function (existingTagID) {
+            var tagStillRemains = newTags.some(function (newTag) { return newTag.id === existingTagID });
+            return !tagStillRemains;
+        });
+        if (tagsToDetach.length > 0) {
             tagOperations.push(self.tags().detach(tagsToDetach));
+        }
 
+        // Detect any tags that have been added by ID
+        var tagsToAddByID = newTags.filter(function (newTag) { return existingTagIDs.indexOf(newTag.id) != -1});
+        if (tagsToAddByID.length > 0) {
+            // tagOperations.push(self.tags().attach(tagsToAddByID));
+        }
 
-            // Detect any tags that have been added by ID
-            var tagsToAddByID = newTags.filter(function (newTag) { return newTag.id > -1 && existingTagIDs.indexOf(newTag.id) > -1});
-            tagOperations.push(self.tags().attach(tagsToAddByID));
-
-            // Detect any tags that have been added, but don't already exist in the database 
-            var tagsToCreateAndAdd = newTags.filter(function (newTag) { return newTag.id === null || newTag.id === undefined });
-            tagsToCreateAndAdd.forEach(function (tagToCreateAndAdd) {
-                var createAndAddOperation = Tag.add({name: tagToCreateAndAdd.name}).then(function (createdTag) {
-                        return self.tags().attach(createdTag);
-                    });
-                tagOperations.push(createAndAddOperation);
-            });
-
-            return when.all(tagOperations);
-        }));
-
-        // }).then(function () {
-        //     return self.related('tags').fetch();
-        // }).then(function (tags){
-        //     console.log(tags);
+        // // Detect any tags that have been added, but don't already exist in the database 
+        // var tagsToCreateAndAdd = newTags.filter(function (newTag) { return newTag.id === null || newTag.id === undefined });
+        // tagsToCreateAndAdd.forEach(function (tagToCreateAndAdd) {
+        //     var createAndAddOperation = Tag.add({name: tagToCreateAndAdd.name}).then(function (createdTag) {
+        //             return self.tags().attach(createdTag);
+        //         });
+        //     tagOperations.push(createAndAddOperation);
         // });
 
+        return when.all(tagOperations);
     },
 
 
@@ -188,7 +181,7 @@ Post = GhostBookshelf.Model.extend({
     // Extends base model findAll to eager-fetch author and user relationships.
     findAll:  function (options) {
         options = options || {};
-        options.withRelated = [ "author", "user" ];
+        options.withRelated = [ "author", "user", "tags" ];
         return GhostBookshelf.Model.findAll.call(this, options);
     },
 
@@ -196,7 +189,7 @@ Post = GhostBookshelf.Model.extend({
     // Extends base model findOne to eager-fetch author and user relationships.
     findOne: function (args, options) {
         options = options || {};
-        options.withRelated = [ "author", "user" ];
+        options.withRelated = [ "author", "user", "tags" ];
         return GhostBookshelf.Model.findOne.call(this, args, options);
     },
 

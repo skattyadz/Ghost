@@ -243,7 +243,7 @@ settings = {
             setting.set('value', value);
 
             return dataProvider.Settings.edit(setting);
-        }, errors.logAndThrowError);
+        }).then(null, errors.logAndThrowError);
     }
 };
 

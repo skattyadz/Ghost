@@ -51,6 +51,7 @@
     // The Tag UI area associated with a post
     // ----------------------------------------
     TagWidget = Ghost.View.extend({
+        initialize: function() { window.globalFunctionToSetTags(this.model.get('tags'))},
         render: function () { return this; }
     });
 
@@ -197,7 +198,8 @@
 
             var saved = this.model.save(_.extend({
                 title: $('#entry-title').val(),
-                content_raw: Ghost.currentView.editor.getValue()
+                content_raw: Ghost.currentView.editor.getValue(),
+                tags: window.tempGlobalTestingTags
             }, data));
 
             // TODO: Take this out if #2489 gets merged in Backbone. Or patch Backbone

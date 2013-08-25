@@ -39,6 +39,12 @@ GhostBookshelf.Model = GhostBookshelf.Model.extend({
             attrs[key] = relation.toJSON ? relation.toJSON() : relation;
         });
 
+        for (var propertyName in attrs) {
+            if (propertyName.substring(0, 7) === "_pivot_") {
+                delete attrs[propertyName];
+            }
+        }
+
         return attrs;
     }
 

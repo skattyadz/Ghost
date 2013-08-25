@@ -167,6 +167,7 @@ describe('Tag Model', function () {
                 }).then(function (tagModels) {
                     var tagNames = tagModels.map( function (t) { return t.attributes.name });
                     tagNames.should.eql(['tag1', 'tag2', 'tag3']);
+                    tagModels[2].id.should.eql(3); // make sure it hasn't just added a new tag with the same name
 
                     done();
                 }).then(null, done);

@@ -103,11 +103,12 @@
                         populator = $($target.data('populate'));
                         populator.append(category);
                     }
+                    window.tempGlobalTestingTags.push({id: suggestionID, name: suggestions.children(".selected").text()})
                 }
                 suggestions.hide();
             } else {
                 if (e.keyCode === keys.COMMA) {
-                    searchTerm = searchTerm.replace(",", "");
+                    searchTerm = searchTerm.replace(/,/g, "");
                 }  // Remove comma from string if comma is uses to submit.
                 if ($('.category:containsExact("' + searchTerm + '")').length === 0) {
                     category = $('<span class="category">' + searchTerm + '</span>');
@@ -115,6 +116,7 @@
                         populator = $($target.data('populate'));
                         populator.append(category);
                     }
+                    window.tempGlobalTestingTags.push({id: null, name: searchTerm})
                 }
             }
             $target.val('').focus();
@@ -162,6 +164,16 @@
         $(e.currentTarget).remove();
     }
 
+    // haha, what a hack
+    window.globalFunctionToSetTags = function(tags) {
+        if (!tags) return;
+        tags.forEach(function(tag) {
+            var category = $('<span class="category">' + tag.name + '</span>');
+
+            $('.categories').append(category);
+        });
+    };
+
     $(document).ready(function () {
         suggestions = $("ul.suggestions").hide(); // Initnialise suggestions overlay
 
@@ -176,6 +188,7 @@
         $('ul.suggestions').on('click', "li", handleSuggestionClick);
         $('.categories').on('click', ".category", handleCategoryClick);
 
+        window.tempGlobalTestingTags = [];
     });
 
 }());
