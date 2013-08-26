@@ -51,7 +51,7 @@
     // The Tag UI area associated with a post
     // ----------------------------------------
     TagWidget = Ghost.View.extend({
-        initialize: function() { window.globalFunctionToSetTags(this.model.get('tags'))},
+        initialize: function () { window.globalFunctionToSetTags(this.model.get('tags')); },
         render: function () { return this; }
     });
 

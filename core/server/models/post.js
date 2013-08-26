@@ -43,6 +43,10 @@ Post = GhostBookshelf.Model.extend({
         }
 
         this.set('updated_by', 1);
+
+        this.set('user', null, {unset: true});
+        this.set('author', null, {unset: true});
+
         // refactoring of ghost required in order to make these details available here
 
     },
@@ -120,45 +124,64 @@ Post = GhostBookshelf.Model.extend({
         return checkIfSlugExists(slug);
     },
 
-    updateTags: function (newTags) {
+    updateTags: function () {
         var self = this,
-            tagOperations = [];
+            tagOperations = [],
+            newTags = this.get('tags'),
+            tagsToDetach,
+            existingTagIDs,
+            tagsToCreateAndAdd,
+            tagsToAddByID,
+            fetchOperation;
 
-        // handle nested attributes for the post's tags
-        var newTags = this.get('tags');
         if (!newTags) {
             return;
         }
 
         this.set('tags', null, {unset: true});
 
-        var existingTagIDs = this.related('tags').models.map(function (existingTag) { return existingTag.id });
+        fetchOperation = Post.forge({id: this.id}).fetch({withRelated: ['tags']});
+        return fetchOperation.then(function (thisModelWithTags) {
+            var existingTags = thisModelWithTags.related('tags').models;
 
-        // Detect whether any tags were removed
-        var tagsToDetach = existingTagIDs.filter(function (existingTagID) {
-            var tagStillRemains = newTags.some(function (newTag) { return newTag.id === existingTagID });
-            return !tagStillRemains;
+            tagsToDetach = existingTags.filter(function (existingTag) {
+                var tagStillRemains = newTags.some(function (newTag) {
+                    return newTag.id === existingTag.id;
+                });
+
+                return !tagStillRemains;
+            });
+            if (tagsToDetach.length > 0) {
+                tagOperations.push(self.tags().detach(tagsToDetach));
+            }
+
+            // Detect any tags that have been added by ID
+            existingTagIDs = existingTags.map(function (existingTag) {
+                return existingTag.id;
+            });
+
+            tagsToAddByID = newTags.filter(function (newTag) {
+                return existingTagIDs.indexOf(newTag.id) !== -1;
+            });
+
+            if (tagsToAddByID.length > 0) {
+                tagOperations.push(self.tags().attach(tagsToAddByID.id));
+            }
+
+            // Detect any tags that have been added, but don't already exist in the database 
+            tagsToCreateAndAdd = newTags.filter(function (newTag) {
+                return newTag.id === null || newTag.id === undefined;
+            });
+            tagsToCreateAndAdd.forEach(function (tagToCreateAndAdd) {
+                var createAndAddOperation = Tag.add({name: tagToCreateAndAdd.name}).then(function (createdTag) {
+                    return self.tags().attach(createdTag.id);
+                });
+
+                tagOperations.push(createAndAddOperation);
+            });
+
+            return when.all(tagOperations);
         });
-        if (tagsToDetach.length > 0) {
-            tagOperations.push(self.tags().detach(tagsToDetach));
-        }
-
-        // Detect any tags that have been added by ID
-        var tagsToAddByID = newTags.filter(function (newTag) { return existingTagIDs.indexOf(newTag.id) != -1});
-        if (tagsToAddByID.length > 0) {
-            // tagOperations.push(self.tags().attach(tagsToAddByID));
-        }
-
-        // // Detect any tags that have been added, but don't already exist in the database 
-        // var tagsToCreateAndAdd = newTags.filter(function (newTag) { return newTag.id === null || newTag.id === undefined });
-        // tagsToCreateAndAdd.forEach(function (tagToCreateAndAdd) {
-        //     var createAndAddOperation = Tag.add({name: tagToCreateAndAdd.name}).then(function (createdTag) {
-        //             return self.tags().attach(createdTag);
-        //         });
-        //     tagOperations.push(createAndAddOperation);
-        // });
-
-        return when.all(tagOperations);
     },
 
 

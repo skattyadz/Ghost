@@ -103,7 +103,7 @@
                         populator = $($target.data('populate'));
                         populator.append(category);
                     }
-                    window.tempGlobalTestingTags.push({id: suggestionID, name: suggestions.children(".selected").text()})
+                    window.tempGlobalTestingTags.push({id: suggestions.children(".selected").data('tag-id'), name: suggestions.children(".selected").text()});
                 }
                 suggestions.hide();
             } else {
@@ -116,7 +116,7 @@
                         populator = $($target.data('populate'));
                         populator.append(category);
                     }
-                    window.tempGlobalTestingTags.push({id: null, name: searchTerm})
+                    window.tempGlobalTestingTags.push({id: null, name: searchTerm});
                 }
             }
             $target.val('').focus();
@@ -161,17 +161,24 @@
     }
 
     function handleCategoryClick(e) {
-        $(e.currentTarget).remove();
+        var category = $(e.currentTarget);
+
+        window.tempGlobalTestingTags = window.tempGlobalTestingTags.filter(function (tag) {
+            return tag.name !== category.text();
+        });
+
+        category.remove();
     }
 
     // haha, what a hack
-    window.globalFunctionToSetTags = function(tags) {
-        if (!tags) return;
-        tags.forEach(function(tag) {
-            var category = $('<span class="category">' + tag.name + '</span>');
+    window.globalFunctionToSetTags = function (tags) {
+        if (!tags) { return; }
+        tags.forEach(function (tag) {
+            var category = $('<span class="category" data-tag-id="' + tag.id + '">' + tag.name + '</span>');
 
             $('.categories').append(category);
         });
+        window.tempGlobalTestingTags = tags;
     };
 
     $(document).ready(function () {
