@@ -451,7 +451,7 @@ body.zen {
     }
 }
 
-#entry-categories {
+#entry-tags {
     position: absolute;
     top: 0;
     left: 0;
@@ -461,7 +461,7 @@ body.zen {
     padding: 10px 0 0 0;
 }
 
-.category-label {
+.tag-label {
     display: block;
     float: left;
     @include icon($i-tag);
@@ -474,7 +474,7 @@ body.zen {
     }
 }
 
-.category-input {
+.tag-input {
     display: inline-block;
     color: $lightgrey;
     font-weight: 300;
@@ -484,7 +484,7 @@ body.zen {
     &:focus {outline: none;}
 }
 
-.category {
+.tag {
     @include icon-after($i-x, 8px, $darkgrey) {
         margin-left: 4px;
         vertical-align: 5%;
