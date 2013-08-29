@@ -37,7 +37,7 @@
         removeTag: function (tagToRemove) {
             var tags = this.get('tags') || [];
             tags = _.reject(tags, function (tag) {
-                return tag.id === tagToRemove.id || tag.name === tagToRemove.name
+                return tag.id === tagToRemove.id || tag.name === tagToRemove.name;
             });
             this.set('tags', tags);
         }

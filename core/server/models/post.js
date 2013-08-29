@@ -161,11 +161,12 @@ Post = GhostBookshelf.Model.extend({
             });
 
             tagsToAddByID = newTags.filter(function (newTag) {
-                return existingTagIDs.indexOf(newTag.id) !== -1;
+                return existingTagIDs.indexOf(newTag.id) === -1;
             });
 
             if (tagsToAddByID.length > 0) {
-                tagOperations.push(self.tags().attach(tagsToAddByID.id));
+                tagsToAddByID = _.pluck(tagsToAddByID, 'id');
+                tagOperations.push(self.tags().attach(tagsToAddByID));
             }
 
             // Detect any tags that have been added, but don't already exist in the database 

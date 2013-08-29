@@ -107,11 +107,10 @@ describe('Tag Model', function () {
                     var postModel = models[0],
                         attachOperations;
 
-                    attachOperations = [
-                        postModel.tags().attach(models[1]),
-                        postModel.tags().attach(models[2]),
-                        postModel.tags().attach(models[3])
-                    ];
+                    attachOperations = [];
+                    for (var i = 1; i < models.length; i++) {
+                        attachOperations.push(postModel.tags().attach(models[i]))
+                    };
 
                     return when.all(attachOperations).then(function () {
                         return postModel;
@@ -153,7 +152,6 @@ describe('Tag Model', function () {
                     tagData.splice(1, 1);
                     return postModel.set('tags', tagData).save();
                 }).then(function (postModel) {
-                    // return postModel.related('tags').fetch()
                     return PostModel.read({id: postModel.id}, { withRelated: ['tags']});
                 }).then(function (reloadedPost) {
                     var tagNames = reloadedPost.related('tags').models.map( function (t) { return t.attributes.name });
@@ -178,11 +176,12 @@ describe('Tag Model', function () {
                     tagData.push({id: 3, name: 'tag3'});
                     return postModel.set('tags', tagData).save();
                 }).then(function () {
-                    return postModel.related('tags').fetch()
-                }).then(function (tagModels) {
-                    var tagNames = tagModels.map( function (t) { return t.attributes.name });
+                    return PostModel.read({id: postModel.id}, { withRelated: ['tags']});
+                }).then(function (reloadedPost) {
+                    var tagModels = reloadedPost.related('tags').models,
+                        tagNames = tagModels.map( function (t) { return t.attributes.name });
                     tagNames.should.eql(['tag1', 'tag2', 'tag3']);
-                    tagModels.models[2].id.should.eql(3); // make sure it hasn't just added a new tag with the same name
+                    tagModels[2].id.should.eql(3); // make sure it hasn't just added a new tag with the same name
 
                     done();
                 }).then(null, done);
@@ -199,9 +198,9 @@ describe('Tag Model', function () {
                     tagData.push({id: null, name: 'tag3'});
                     return postModel.set('tags', tagData).save();
                 }).then(function (postModel) {
-                    return postModel.related('tags').fetch()
-                }).then(function (tagModels) {
-                    var tagNames = tagModels.map( function (t) { return t.attributes.name });
+                    return PostModel.read({id: postModel.id}, { withRelated: ['tags']});
+                }).then(function (reloadedPost) {
+                    var tagNames = reloadedPost.related('tags').models.map( function (t) { return t.attributes.name });
                     tagNames.should.eql(['tag1', 'tag2', 'tag3']);
 
                     done();

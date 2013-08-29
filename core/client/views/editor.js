@@ -5,7 +5,6 @@
     "use strict";
 
     var PublishBar,
-        TagWidget,
         ActionsWidget,
         MarkdownShortcuts = [
             {'key': 'Ctrl+B', 'style': 'bold'},
@@ -40,214 +39,12 @@
     PublishBar = Ghost.View.extend({
 
         initialize: function () {
-            this.addSubview(new TagWidget({el: this.$('#entry-tags'), model: this.model})).render();
+            this.addSubview(new Ghost.View.EditorTagWidget({el: this.$('#entry-tags'), model: this.model})).render();
             this.addSubview(new ActionsWidget({el: this.$('#entry-actions'), model: this.model})).render();
         },
 
         render: function () { return this; }
 
-    });
-
-    // The Tag UI area associated with a post
-    // ----------------------------------------
-    TagWidget = Ghost.View.extend({
-
-        events: {
-            'keyup [data-input-behaviour="tag"]': 'handleKeyup',
-            'keydown [data-input-behaviour="tag"]': 'handleKeydown',
-            'click ul.suggestions li': 'handleSuggestionClick',
-            'click .tags .tag': 'handleTagClick'
-        },
-
-        keys: {
-            UP: 38,
-            DOWN: 40,
-            ESC: 27,
-            ENTER: 13,
-            COMMA: 188,
-            BACKSPACE: 8
-        },
-
-        initialize: function () {
-        },
-
-        render: function () {
-            var tags = this.model.get('tags'),
-                $tags = $('.tags'),
-                tagOffset;
-
-            $tags.empty();
-            tags.forEach(function (tag) {
-                var $tag = $('<span class="tag" data-tag-id="' + tag.id + '">' + tag.name + '</span>');
-
-                $tags.append($tag);
-            });
-
-            this.$suggestions = $("ul.suggestions").hide(); // Initialise suggestions overlay
-
-            if (tags.length) {
-                tagOffset = $('.tag-input').offset().left;
-                $('.tag-blocks').css({'left': tagOffset + 'px'});
-            }
-
-            return this;
-        },
-
-        getAllGhostTags: function () {
-            return [{id:1, name: 'first tag'}, {id:2, name: 'secnod tag'}];
-        },
-
-        showSuggestions: function ($target, searchTerm) {
-            this.$suggestions.show();
-            var results = this.findMatchingTags(searchTerm),
-                styles = {
-                    left: $target.position().left
-                },
-                maxSuggestions = 5, // Limit the suggestions number
-                results_length = results.length,
-                i,
-                suggest;
-
-            this.$suggestions.css(styles);
-            this.$suggestions.html("");
-
-            if (results_length < maxSuggestions) {
-                maxSuggestions = results_length;
-            }
-            for (i = 0; i < maxSuggestions; i += 1) {
-                this.$suggestions.append("<li data-tag-id='"+results[i].id+"'><a href='#'>" + results[i].name + "</a></li>");
-            }
-
-            suggest = $('ul.suggestions li a:contains("' + searchTerm + '")');
-
-            suggest.each(function () {
-                var src_str = $(this).html(),
-                    term = searchTerm,
-                    pattern;
-
-                term = term.replace(/(\s+)/, "(<[^>]+>)*$1(<[^>]+>)*");
-                pattern = new RegExp("(" + term + ")", "i");
-
-                src_str = src_str.replace(pattern, "<mark>$1</mark>");
-                /*jslint regexp: true */ // - would like to remove this
-                src_str = src_str.replace(/(<mark>[^<>]*)((<[^>]+>)+)([^<>]*<\/mark>)/, "$1</mark>$2<mark>$4");
-
-                $(this).html(src_str);
-            });
-        },
-
-        handleKeyup: function (e) {
-            var $target = $(e.currentTarget),
-                searchTerm = $.trim($target.val()).toLowerCase(),
-                tag,
-                populator;
-
-            if (e.keyCode === this.keys.UP) {
-                e.preventDefault();
-                if (this.$suggestions.is(":visible")) {
-                    if (this.$suggestions.children(".selected").length === 0) {
-                        this.$suggestions.find("li:last-child").addClass('selected');
-                    } else {
-                        this.$suggestions.children(".selected").removeClass('selected').prev().addClass('selected');
-                    }
-                }
-            } else if (e.keyCode === this.keys.DOWN) {
-                e.preventDefault();
-                if (this.$suggestions.is(":visible")) {
-                    if (this.$suggestions.children(".selected").length === 0) {
-                        this.$suggestions.find("li:first-child").addClass('selected');
-                    } else {
-                        this.$suggestions.children(".selected").removeClass('selected').next().addClass('selected');
-                    }
-                }
-            } else if (e.keyCode === this.keys.ESC) {
-                this.$suggestions.hide();
-            } else if ((e.keyCode === this.keys.ENTER || e.keyCode === this.keys.COMMA) && searchTerm) {
-                // Submit tag using enter or comma key
-                e.preventDefault();
-
-                var $selectedSuggestion = this.$suggestions.children(".selected");
-                if (this.$suggestions.is(":visible") && $selectedSuggestion.length !== 0) {
-
-                    if ($('.tag:containsExact("' + $selectedSuggestion.text() + '")').length === 0) {
-
-                        var tag = {id: $selectedSuggestion.data('tag-id'), name: $selectedSuggestion.text()};
-                        var $tag = $('<span class="tag" data-tag-id="'+tag.id+'">' + $selectedSuggestion.text() + '</span>');
-
-                        this.$('.tags').append($tag);
-                        this.model.addTag(tag);
-                    }
-                } else {
-                    if (e.keyCode === this.keys.COMMA) {
-                        searchTerm = searchTerm.replace(/,/g, "");
-                    }  // Remove comma from string if comma is used to submit.
-                    if ($('.tag:containsExact("' + searchTerm + '")').length === 0) {
-                        tag = $('<span class="tag">' + searchTerm + '</span>');
-                        this.$('.tags').append(tag);
-                        this.model.addTag({id: null, name: searchTerm});
-                    }
-                }
-                $target.val('').focus();
-                searchTerm = ""; // Used to reset search term
-                this.$suggestions.hide();
-            }
-
-            if (e.keyCode === this.keys.UP || e.keyCode === this.keys.DOWN) {
-                return false;
-            }
-
-            if (searchTerm) {
-                this.showSuggestions($target, searchTerm);
-            } else {
-                this.$suggestions.hide();
-            }
-        },
-
-        handleKeydown: function (e) {
-            var $target = $(e.currentTarget),
-                populator,
-                lastBlock;
-            // Delete character tiggers on Keydown, so needed to check on that event rather than Keyup.
-            if (e.keyCode === this.keys.BACKSPACE && !$target.val()) {
-                lastBlock = this.$('.tags').find('.tag').last();
-                lastBlock.remove();
-                var tag = {id: lastBlock.data('tag-id'), name: lastBlock.text()};
-                this.model.removeTag(tag);
-            }
-        },
-
-        handleSuggestionClick: function (e) {
-            var $target = $(e.currentTarget),
-                tag = $('<span class="tag">' + $(e.currentTarget).text() + '</span>'),
-                populator;
-
-            if ($target.parent().data('populate')) {
-                populator = $($target.parent().data('populate'));
-                populator.append(tag);
-                this.$suggestions.hide();
-                $('[data-input-behaviour="tag"]').val('').focus();
-            }
-        },
-
-        handleTagClick: function(e) {
-            var $tag = $(e.currentTarget);
-            $tag.remove();
-
-            var tag = {id: $tag.data('tag-id'), name: $tag.text()};
-            this.model.removeTag(tag);
-        },
-
-        findMatchingTags: function (searchTerm) {
-            var tags = this.getAllGhostTags();
-            searchTerm = searchTerm.toUpperCase();
-            return _.filter(tags, function (tag) {
-                return tag.name.toUpperCase().indexOf(searchTerm) !== -1;
-            });
-        },
-
-        selectedSuggestion: function () {
-
-        }
     });
 
     // The Publish, Queue, Publish Now buttons
@@ -363,6 +160,8 @@
                     status: 'passive'
                 });
             }
+
+            this.model.trigger('willSave');
 
             view.savePost({
                 status: status
