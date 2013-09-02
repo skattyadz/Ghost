@@ -61,7 +61,7 @@ up = function () {
 
         // Once we create all of the initial tables, bootstrap any of the data
         return when.all([
-            knex('settings').insert(fixtures.settings)
+            // knex('settings').insert(fixtures.settings)
         ]);
 
     }).then(function () {
